@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Laurel Studio — 근무 스케줄</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap">
+<style>
+:root{
+  --bg:#F4F1EC; --card:#FFF; --dark:#1C1917; --border:#E5DDD5; --mid:#7A726A;
+  --accent:#C9A84C; --green:#4A7C59; --green-bg:#EBF4EE; --red:#B94040; --red-bg:#FDEAEA;
+  --off:#F0EBE5;
+  --c1:#3E8E7E; --c2:#7A5B9E; --c3:#5B7FA6; --c4:#C2745B; --c5:#4A7C59; --c6:#96707F;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  background:var(--bg); color:var(--dark); line-height:1.6;
+  padding-bottom:40px;
+}
+.hdr{background:var(--dark);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.hdr-logo{font-family:'DM Serif Display',serif;font-size:18px;color:#F4F1EC;}
+.hdr-logo em{color:var(--accent);font-style:italic;}
+.hdr-sub{font-size:11px;color:#9A9088;letter-spacing:1px;margin-top:1px;}
+.btn-edit{padding:8px 14px;border:1px solid #4A443E;background:#2A2520;color:#C9A84C;border-radius:8px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.btn-edit.on{background:var(--accent);color:var(--dark);border-color:var(--accent);}
+
+.wrap{max-width:1100px;margin:0 auto;padding:0 14px;}
+.sync{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mid);padding:8px 4px 4px;}
+.dot{width:6px;height:6px;border-radius:50%;background:#ccc;}
+.dot.ok{background:var(--green);animation:pulse 2s infinite;}
+.dot.err{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.weeknav{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 0 14px;}
+.weeknav button{width:38px;height:38px;border:1px solid var(--border);background:var(--card);border-radius:10px;font-size:16px;cursor:pointer;color:var(--dark);}
+.weeknav .label{font-size:15px;font-weight:700;min-width:170px;text-align:center;}
+.weeknav .today{font-size:12px;padding:7px 12px;border-radius:20px;border:1px solid var(--border);background:var(--card);cursor:pointer;font-family:inherit;color:var(--mid);white-space:nowrap;flex-shrink:0;}
+
+/* 주간 표 */
+.gridwrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--card);}
+table.sched{border-collapse:collapse;width:100%;min-width:660px;}
+table.sched th,table.sched td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:0;}
+table.sched th:last-child,table.sched td:last-child{border-right:none;}
+table.sched tr:last-child td{border-bottom:none;}
+thead th{background:#FAF8F5;padding:9px 6px;font-size:12px;font-weight:700;}
+thead th .d{font-size:10px;color:var(--mid);font-weight:500;margin-top:1px;}
+thead th.today{background:var(--accent);color:var(--dark);}
+thead th.today .d{color:#5A4A10;}
+thead th.sat{color:var(--c3);} thead th.sun{color:var(--red);}
+th.namecol{text-align:left;padding-left:12px;min-width:96px;position:sticky;left:0;z-index:2;background:#FAF8F5;}
+td.namecell{position:sticky;left:0;z-index:1;background:var(--card);padding:8px 10px;min-width:96px;}
+.nm{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:6px;}
+.chip{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
+.role{font-size:10.5px;color:var(--mid);margin-top:1px;}
+.hrs{font-size:10.5px;color:var(--mid);margin-top:3px;font-variant-numeric:tabular-nums;}
+
+td.cell{padding:6px 5px;text-align:center;cursor:default;vertical-align:top;}
+td.cell.editable{cursor:pointer;}
+td.cell.editable:active{background:#FAF8F5;}
+td.cell.todaycol{background:#FFFBEF;}
+.shift{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.2px;}
+.dur{font-size:10px;color:var(--mid);margin-top:1px;}
+.bar{height:5px;border-radius:3px;margin-top:5px;background:var(--border);position:relative;overflow:hidden;}
+.bar i{position:absolute;top:0;bottom:0;border-radius:3px;display:block;}
+.offmark{font-size:11.5px;color:#B9AFA4;padding:6px 0;}
+.ovr{display:inline-block;font-size:9px;padding:1px 5px;border-radius:8px;background:var(--accent);color:var(--dark);font-weight:700;margin-top:4px;}
+
+/* 커버리지 */
+.cov{margin-top:14px;border:1px solid var(--border);border-radius:12px;background:var(--card);padding:14px 16px;}
+.cov h3{font-size:12px;font-weight:700;color:var(--mid);letter-spacing:.06em;margin-bottom:4px;}
+.cov p.hint{font-size:11.5px;color:var(--mid);margin-bottom:10px;}
+.covwrap{overflow-x:auto;}
+table.cov-t{border-collapse:collapse;min-width:560px;width:100%;}
+table.cov-t th,table.cov-t td{padding:3px 2px;text-align:center;font-size:10.5px;font-variant-numeric:tabular-nums;}
+table.cov-t th.h{color:var(--mid);font-weight:500;}
+table.cov-t td.dayname{text-align:left;font-size:11.5px;font-weight:700;width:44px;}
+.cbox{height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;}
+.c0{background:var(--red-bg);color:var(--red);}
+.c1{background:#FEF6E0;color:#8A6500;}
+.c2{background:var(--green-bg);color:var(--green);}
+.c3{background:#DCEAE0;color:#2F5C3F;}
+
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--mid);}
+.legend span{display:flex;align-items:center;gap:5px;}
+.legend i{width:12px;height:12px;border-radius:3px;display:block;}
+
+/* 시트 */
+.ov{display:none;position:fixed;inset:0;background:rgba(28,25,23,.5);z-index:100;align-items:flex-end;justify-content:center;}
+.ov.open{display:flex;}
+.sheet{background:var(--card);border-radius:18px 18px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding:16px 20px 28px;}
+.sheet .grab{width:38px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px;}
+.sheet h2{font-size:17px;margin-bottom:2px;}
+.sheet .who{font-size:12.5px;color:var(--mid);margin-bottom:16px;}
+.fg{margin-bottom:14px;}
+label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mid);margin-bottom:6px;}
+input,select{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:15px;background:var(--bg);outline:none;-webkit-appearance:none;color:var(--dark);}
+input:focus,select:focus{border-color:var(--green);background:#fff;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.seg button{padding:12px;border:1.5px solid var(--border);background:var(--card);border-radius:10px;font-family:inherit;font-size:13.5px;cursor:pointer;color:var(--dark);}
+.seg button.on{border-color:var(--dark);background:var(--dark);color:#fff;font-weight:700;}
+.quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.quick button{padding:7px 11px;border:1px solid var(--border);background:var(--card);border-radius:8px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--mid);}
+.quick button:active{background:var(--dark);color:#fff;}
+.acts{display:flex;gap:8px;margin-top:18px;}
+.btn{flex:1;padding:14px;border:none;border-radius:12px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;}
+.btn-save{background:var(--green);color:#fff;}
+.btn-off{background:var(--off);color:var(--mid);border:1.5px solid var(--border);}
+.btn-cancel{padding:14px 16px;border:1.5px solid var(--border);background:none;border-radius:12px;font-family:inherit;font-size:15px;cursor:pointer;color:var(--mid);}
+.note{font-size:11.5px;color:var(--mid);margin-top:12px;line-height:1.5;}
+.err{font-size:12.5px;color:var(--red);min-height:16px;margin-top:8px;}
+
+/* 직원 관리 */
+.stafflist{display:flex;flex-direction:column;gap:8px;}
+.staffrow{display:flex;align-items:center;gap:8px;}
+.staffrow .chip{width:11px;height:11px;border-radius:3px;flex-shrink:0;}
+.staffrow input{flex:1;padding:9px 11px;font-size:14px;}
+.staffrow .tog{padding:9px 11px;border:1.5px solid var(--border);background:var(--card);border-radius:9px;font-family:inherit;font-size:11.5px;cursor:pointer;white-space:nowrap;color:var(--mid);}
+.staffrow .tog.on{background:var(--green-bg);border-color:#B0D4BC;color:var(--green);font-weight:700;}
+
+.editbar{background:var(--accent);color:var(--dark);padding:8px 14px;border-radius:10px;font-size:12.5px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.editbar button{padding:6px 10px;border:1px solid rgba(0,0,0,.2);background:rgba(255,255,255,.5);border-radius:7px;font-family:inherit;font-size:11.5px;cursor:pointer;}
+.foot{text-align:center;font-size:11px;color:#B9AFA4;padding:20px 0 0;}
+@media (max-width:520px){
+  .weeknav .label{min-width:130px;font-size:14px;}
+  .shift{font-size:11px;}
+}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div>
+    <div class="hdr-logo">Laurel <em>Studio</em></div>
+    <div class="hdr-sub">근무 스케줄</div>
+  </div>
+  <button class="btn-edit" id="btnEdit" onclick="toggleEdit()">✏️ 수정</button>
+</div>
+
+<div class="wrap">
+  <div class="sync"><div class="dot" id="dot"></div><span id="syncLbl">불러오는 중…</span></div>
+
+  <div id="editBar" style="display:none" class="editbar">
+    <span>수정 모드 — 칸을 눌러 시간을 정하세요</span>
+    <button onclick="openStaff()">직원 이름</button>
+  </div>
+
+  <div class="weeknav">
+    <button onclick="moveWeek(-1)">‹</button>
+    <div class="label" id="weekLabel"></div>
+    <button onclick="moveWeek(1)">›</button>
+    <button class="today" onclick="goThisWeek()">이번 주</button>
+  </div>
+
+  <div class="gridwrap"><table class="sched" id="grid"></table></div>
+
+  <div class="cov">
+    <h3>시간대별 인원</h3>
+    <p class="hint">영업 10시–20시. 빨간 칸은 아무도 없는 시간입니다.</p>
+    <div class="covwrap"><table class="cov-t" id="covTable"></table></div>
+    <div class="legend">
+      <span><i class="c0" style="background:#FDEAEA"></i>0명</span>
+      <span><i class="c1" style="background:#FEF6E0"></i>1명</span>
+      <span><i class="c2" style="background:#EBF4EE"></i>2명</span>
+      <span><i class="c3" style="background:#DCEAE0"></i>3명 이상</span>
+    </div>
+  </div>
+
+  <div class="foot">매주 반복되는 기본 근무표에, 그 주만 다른 날은 따로 표시됩니다</div>
+</div>
+
+<!-- 근무 시간 편집 -->
+<div class="ov" id="ovShift" onclick="if(event.target===this)closeShift()">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="shTitle">근무 시간</h2>
+    <div class="who" id="shWho"></div>
+
+    <div class="fg">
+      <label>적용 범위</label>
+      <div class="seg">
+        <button id="scopeWeek" onclick="setScope('week')">이번 주만</button>
+        <button id="scopeAll" onclick="setScope('all')">매주 반복</button>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label>시간</label>
+      <div class="row2">
+        <select id="shStart"></select>
+        <select id="shEnd"></select>
+      </div>
+      <div class="quick">
+        <button onclick="quickSet('10:00','14:00')">오전 10–2</button>
+        <button onclick="quickSet('10:00','17:00')">10–5</button>
+        <button onclick="quickSet('15:00','19:00')">오후 3–7</button>
+        <button onclick="quickSet('10:00','20:00')">종일</button>
+      </div>
+    </div>
+
+    <div class="err" id="shErr"></div>
+
+    <div class="acts">
+      <button class="btn btn-off" onclick="saveOff()">휴무</button>
+      <button class="btn btn-save" onclick="saveShift()">저장</button>
+    </div>
+    <div class="acts" style="margin-top:8px">
+      <button class="btn-cancel" style="flex:1" onclick="closeShift()">닫기</button>
+      <button class="btn-cancel" style="flex:1" id="btnClearOvr" onclick="clearOverride()">이번 주 예외 지우기</button>
+    </div>
+    <p class="note" id="shNote"></p>
+  </div>
+</div>
+
+<!-- PIN -->
+<div class="ov" id="ovPin" onclick="if(event.target===this)closePin()">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="pinTitle">매니저 확인</h2>
+    <div class="who" id="pinWho">스케줄을 수정할 수 있는 사람만 들어갑니다</div>
+    <div class="fg">
+      <label id="pinLbl">PIN 4자리</label>
+      <input type="password" id="pinInput" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••">
+    </div>
+    <div class="err" id="pinErr"></div>
+    <div class="acts">
+      <button class="btn-cancel" style="flex:1" onclick="closePin()">취소</button>
+      <button class="btn btn-save" onclick="submitPin()">확인</button>
+    </div>
+    <p class="note">직원분들이 실수로 스케줄을 바꾸지 않게 막는 장치입니다. 강력한 보안은 아니니 중요한 정보는 넣지 마세요.</p>
+  </div>
+</div>
+
+<!-- 직원 이름 -->
+<div class="ov" id="ovStaff" onclick="if(event.target===this)closeStaff()">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2>직원 이름</h2>
+    <div class="who">이름을 바꾸거나, 표에서 숨기고 보일 수 있습니다</div>
+    <div class="stafflist" id="staffList"></div>
+    <div class="acts">
+      <button class="btn-cancel" style="flex:1" onclick="closeStaff()">닫기</button>
+      <button class="btn btn-save" onclick="saveStaff()">저장</button>
+    </div>
+    <div class="acts" style="margin-top:8px">
+      <button class="btn-cancel" style="flex:1" onclick="changePin()">매니저 PIN 바꾸기</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA0nJAcOV64dq2QT2BVSsGxis99VTA2eEI",
+  authDomain: "laurel-studio.firebaseapp.com",
+  databaseURL: "https://laurel-studio-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "laurel-studio",
+  storageBucket: "laurel-studio.firebasestorage.app",
+  messagingSenderId: "516403607342",
+  appId: "1:516403607342:web:5389cdfe397afcee1cacbf"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+/* ═══════════ 상수 ═══════════ */
+const OPEN_H = 10, CLOSE_H = 20;               // 영업 10:00 ~ 20:00
+const DOW_KR = ['일','월','화','수','목','금','토'];
+const COLORS = ['#3E8E7E','#7A5B9E','#5B7FA6','#C2745B','#4A7C59','#96707F'];
+const DEFAULT_STAFF = [
+  { id:'s1', name:'바비',   order:1, active:true  },
+  { id:'s2', name:'진모',   order:2, active:true  },
+  { id:'s3', name:'예진',   order:3, active:true  },
+  { id:'s4', name:'혜주',   order:4, active:true  },
+  { id:'s5', name:'예비 1', order:5, active:false },
+  { id:'s6', name:'예비 2', order:6, active:false }
+];
+
+/* ═══════════ 상태 ═══════════ */
+let DATA = { staff:{}, pattern:{}, week:{}, pin:'' };
+let viewMonday = mondayOf(new Date());
+let editMode = false;
+let cur = { staffId:null, dow:null, scope:'week' };
+
+/* ═══════════ 날짜 유틸 ═══════════ */
+function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function mondayOf(d){
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dow = x.getDay();                 // 0=일
+  x.setDate(x.getDate() - ((dow + 6) % 7));
+  return x;
+}
+function addDays(d, n){ const x = new Date(d.getTime()); x.setDate(x.getDate()+n); return x; }
+function weekKey(monday){ return ymd(monday); }
+function toMin(t){ if(!t) return 0; const p = String(t).split(':'); return (+p[0]||0)*60 + (+p[1]||0); }
+function toStr(m){ return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+function fmtDur(min){
+  if(min<=0) return '';
+  const h = Math.floor(min/60), m = min%60;
+  return m ? (h+'시간 '+m+'분') : (h+'시간');
+}
+
+/* ═══════════ 스케줄 조회 ═══════════ */
+// 요일(0=일)의 실제 근무. week 예외가 있으면 그것, 없으면 pattern
+function shiftOf(staffId, dow, monday){
+  const wk = DATA.week[weekKey(monday)];
+  const ovr = wk && wk[staffId] ? wk[staffId][dow] : undefined;
+  if (ovr !== undefined && ovr !== null) return { ...ovr, isOverride:true };
+  const pat = DATA.pattern[staffId] ? DATA.pattern[staffId][dow] : undefined;
+  if (pat) return { ...pat, isOverride:false };
+  return { off:true, isOverride:false };
+}
+function activeStaff(){
+  return Object.values(DATA.staff)
+    .filter(s => s.active)
+    .sort((a,b) => (a.order||99) - (b.order||99));
+}
+function colorOf(s){ return COLORS[((s.order||1)-1) % COLORS.length]; }
+
+/* ═══════════ 렌더 ═══════════ */
+function render(){
+  renderWeekLabel();
+  renderGrid();
+  renderCoverage();
+}
+
+function renderWeekLabel(){
+  const sun = addDays(viewMonday, 6);
+  const same = viewMonday.getMonth() === sun.getMonth();
+  const txt = (viewMonday.getMonth()+1)+'월 '+viewMonday.getDate()+'일 – ' +
+              (same ? '' : (sun.getMonth()+1)+'월 ') + sun.getDate()+'일';
+  const isNow = weekKey(viewMonday) === weekKey(mondayOf(new Date()));
+  document.getElementById('weekLabel').textContent = txt + (isNow ? ' · 이번 주' : '');
+}
+
+function renderGrid(){
+  const todayKey = ymd(new Date());
+  const staff = activeStaff();
+  let h = '<thead><tr><th class="namecol">직원</th>';
+  for (let i = 0; i < 7; i++){
+    const d = addDays(viewMonday, i);
+    const dow = d.getDay();
+    const cls = ymd(d) === todayKey ? ' today' : (dow===0 ? ' sun' : (dow===6 ? ' sat' : ''));
+    h += '<th class="'+cls.trim()+'">'+DOW_KR[dow]+'<div class="d">'+(d.getMonth()+1)+'/'+d.getDate()+'</div></th>';
+  }
+  h += '</tr></thead><tbody>';
+
+  if (!staff.length){
+    h += '<tr><td colspan="8" style="padding:26px;text-align:center;color:var(--mid);font-size:13px">' +
+         '표시할 직원이 없습니다. 수정 모드에서 「직원 이름」을 눌러 켜주세요.</td></tr>';
+  }
+
+  staff.forEach(s => {
+    let weekMin = 0;
+    let row = '';
+    for (let i = 0; i < 7; i++){
+      const d = addDays(viewMonday, i);
+      const dow = d.getDay();
+      const sh = shiftOf(s.id, dow, viewMonday);
+      const isToday = ymd(d) === todayKey;
+      const cell = [];
+      if (sh.off || !sh.start || !sh.end){
+        cell.push('<div class="offmark">휴무</div>');
+      } else {
+        const a = toMin(sh.start), b = toMin(sh.end);
+        const mins = Math.max(0, b - a);
+        weekMin += mins;
+        const total = (CLOSE_H - OPEN_H) * 60;
+        const left = Math.max(0, (a - OPEN_H*60) / total * 100);
+        const wid  = Math.min(100 - left, mins / total * 100);
+        cell.push('<div class="shift">'+sh.start+'–'+sh.end+'</div>');
+        cell.push('<div class="dur">'+fmtDur(mins)+'</div>');
+        cell.push('<div class="bar"><i style="left:'+left.toFixed(1)+'%;width:'+wid.toFixed(1)+'%;background:'+colorOf(s)+'"></i></div>');
+      }
+      if (sh.isOverride) cell.push('<div class="ovr">이번 주만</div>');
+      row += '<td class="cell'+(editMode?' editable':'')+(isToday?' todaycol':'')+'"' +
+             (editMode ? ' onclick="openShift(\''+s.id+'\','+dow+')"' : '') + '>' +
+             cell.join('') + '</td>';
+    }
+    h += '<tr><td class="namecell"><div class="nm"><span class="chip" style="background:'+colorOf(s)+'"></span>'+esc(s.name)+'</div>' +
+         '<div class="hrs">'+(weekMin>0 ? '주 '+fmtDur(weekMin) : '이번 주 휴무')+'</div></td>' + row + '</tr>';
+  });
+
+  h += '</tbody>';
+  document.getElementById('grid').innerHTML = h;
+}
+
+function renderCoverage(){
+  const staff = activeStaff();
+  let h = '<tr><th class="dayname"></th>';
+  for (let hh = OPEN_H; hh < CLOSE_H; hh++) h += '<th class="h">'+hh+'</th>';
+  h += '</tr>';
+
+  for (let i = 0; i < 7; i++){
+    const d = addDays(viewMonday, i);
+    const dow = d.getDay();
+    h += '<tr><td class="dayname">'+DOW_KR[dow]+'</td>';
+    for (let hh = OPEN_H; hh < CLOSE_H; hh++){
+      let n = 0;
+      staff.forEach(s => {
+        const sh = shiftOf(s.id, dow, viewMonday);
+        if (sh.off || !sh.start || !sh.end) return;
+        const a = toMin(sh.start), b = toMin(sh.end);
+        if (a <= hh*60 && b >= (hh+1)*60) n++;
+        else if (a < (hh+1)*60 && b > hh*60) n++;   // 부분 겹침도 인원으로 셈
+      });
+      const cls = n === 0 ? 'c0' : n === 1 ? 'c1' : n === 2 ? 'c2' : 'c3';
+      h += '<td><div class="cbox '+cls+'">'+(n||'')+'</div></td>';
+    }
+    h += '</tr>';
+  }
+  document.getElementById('covTable').innerHTML = h;
+}
+
+function esc(v){
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ═══════════ 주 이동 ═══════════ */
+window.moveWeek = (n) => { viewMonday = addDays(viewMonday, n*7); render(); };
+window.goThisWeek = () => { viewMonday = mondayOf(new Date()); render(); };
+
+/* ═══════════ 시간 선택지 ═══════════ */
+function fillTimes(){
+  const a = document.getElementById('shStart'), b = document.getElementById('shEnd');
+  let o = '';
+  for (let m = OPEN_H*60; m <= CLOSE_H*60; m += 30) o += '<option value="'+toStr(m)+'">'+toStr(m)+'</option>';
+  a.innerHTML = o; b.innerHTML = o;
+}
+
+/* ═══════════ 근무 편집 ═══════════ */
+window.openShift = (staffId, dow) => {
+  if (!editMode) return;
+  cur = { staffId, dow, scope:'week' };
+  const s = DATA.staff[staffId];
+  const sh = shiftOf(staffId, dow, viewMonday);
+  document.getElementById('shTitle').textContent = DOW_KR[dow] + '요일 근무';
+  document.getElementById('shWho').textContent = (s ? s.name : '') + ' · ' +
+    (viewMonday.getMonth()+1) + '월 ' + addDays(viewMonday, (dow+6)%7).getDate() + '일이 포함된 주';
+  document.getElementById('shStart').value = (sh.start || '10:00');
+  document.getElementById('shEnd').value   = (sh.end   || '17:00');
+  document.getElementById('shErr').textContent = '';
+  document.getElementById('btnClearOvr').style.display = sh.isOverride ? '' : 'none';
+  setScope('week');
+  document.getElementById('ovShift').classList.add('open');
+};
+window.closeShift = () => document.getElementById('ovShift').classList.remove('open');
+
+window.setScope = (v) => {
+  cur.scope = v;
+  document.getElementById('scopeWeek').className = v === 'week' ? 'on' : '';
+  document.getElementById('scopeAll').className  = v === 'all'  ? 'on' : '';
+  document.getElementById('shNote').textContent = v === 'week'
+    ? '이 주에만 적용됩니다. 다음 주부터는 원래 근무표로 돌아갑니다.'
+    : '매주 이 요일에 계속 적용됩니다. 이 주에만 달랐던 설정은 지워집니다.';
+};
+
+window.quickSet = (a, b) => {
+  document.getElementById('shStart').value = a;
+  document.getElementById('shEnd').value = b;
+};
+
+async function writeShift(val){
+  const { staffId, dow, scope } = cur;
+  const wk = weekKey(viewMonday);
+  try {
+    if (scope === 'all'){
+      await set(ref(db, 'schedule/pattern/'+staffId+'/'+dow), val);
+      await set(ref(db, 'schedule/week/'+wk+'/'+staffId+'/'+dow), null);   // 그 주 예외 제거
+    } else {
+      await set(ref(db, 'schedule/week/'+wk+'/'+staffId+'/'+dow), val);
+    }
+    closeShift();
+  } catch (e){
+    document.getElementById('shErr').textContent = '저장이 안 됐어요 — 인터넷 확인하고 다시 눌러주세요';
+    console.error(e);
+  }
+}
+
+window.saveShift = () => {
+  const a = document.getElementById('shStart').value;
+  const b = document.getElementById('shEnd').value;
+  if (toMin(b) <= toMin(a)){
+    document.getElementById('shErr').textContent = '끝나는 시간이 시작보다 빠릅니다';
+    return;
+  }
+  writeShift({ start:a, end:b });
+};
+window.saveOff = () => writeShift({ off:true });
+
+window.clearOverride = async () => {
+  const wk = weekKey(viewMonday);
+  try {
+    await set(ref(db, 'schedule/week/'+wk+'/'+cur.staffId+'/'+cur.dow), null);
+    closeShift();
+  } catch (e){
+    document.getElementById('shErr').textContent = '지우지 못했어요 — 다시 시도해주세요';
+  }
+};
+
+/* ═══════════ 직원 이름 ═══════════ */
+window.openStaff = () => {
+  const list = Object.values(DATA.staff).sort((a,b)=>(a.order||99)-(b.order||99));
+  document.getElementById('staffList').innerHTML = list.map(s =>
+    '<div class="staffrow" data-id="'+s.id+'">' +
+      '<span class="chip" style="background:'+colorOf(s)+'"></span>' +
+      '<input type="text" value="'+esc(s.name)+'" maxlength="12">' +
+      '<button class="tog'+(s.active?' on':'')+'" onclick="togStaff(this)">'+(s.active?'표시':'숨김')+'</button>' +
+    '</div>').join('');
+  document.getElementById('ovStaff').classList.add('open');
+};
+window.closeStaff = () => document.getElementById('ovStaff').classList.remove('open');
+window.togStaff = (btn) => {
+  const on = btn.classList.toggle('on');
+  btn.textContent = on ? '표시' : '숨김';
+};
+window.saveStaff = async () => {
+  const rows = document.querySelectorAll('#staffList .staffrow');
+  const out = {};
+  rows.forEach((r, i) => {
+    const id = r.dataset.id;
+    const base = DATA.staff[id] || {};
+    out[id] = {
+      id,
+      name: (r.querySelector('input').value || '').trim() || ('직원 '+(i+1)),
+      order: base.order || (i+1),
+      active: r.querySelector('.tog').classList.contains('on')
+    };
+  });
+  try {
+    await set(ref(db, 'schedule/staff'), out);
+    closeStaff();
+  } catch (e){ alert('저장이 안 됐어요 — 인터넷을 확인해주세요'); }
+};
+
+/* ═══════════ PIN ═══════════ */
+async function sha(txt){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+let pinMode = 'check';   // check | set | change
+
+window.toggleEdit = () => {
+  if (editMode){
+    editMode = false;
+    document.getElementById('btnEdit').classList.remove('on');
+    document.getElementById('btnEdit').textContent = '✏️ 수정';
+    document.getElementById('editBar').style.display = 'none';
+    render();
+    return;
+  }
+  pinMode = DATA.pin ? 'check' : 'set';
+  document.getElementById('pinTitle').textContent = pinMode === 'set' ? 'PIN 정하기' : '매니저 확인';
+  document.getElementById('pinWho').textContent = pinMode === 'set'
+    ? '처음이라 PIN이 없습니다. 쓸 번호를 정해주세요.'
+    : '스케줄을 수정할 수 있는 사람만 들어갑니다';
+  document.getElementById('pinLbl').textContent = pinMode === 'set' ? '새 PIN (숫자 4~6자리)' : 'PIN';
+  document.getElementById('pinInput').value = '';
+  document.getElementById('pinErr').textContent = '';
+  document.getElementById('ovPin').classList.add('open');
+  setTimeout(() => document.getElementById('pinInput').focus(), 80);
+};
+window.closePin = () => document.getElementById('ovPin').classList.remove('open');
+window.changePin = () => {
+  closeStaff();
+  pinMode = 'change';
+  document.getElementById('pinTitle').textContent = 'PIN 바꾸기';
+  document.getElementById('pinWho').textContent = '새로 쓸 번호를 넣어주세요';
+  document.getElementById('pinLbl').textContent = '새 PIN (숫자 4~6자리)';
+  document.getElementById('pinInput').value = '';
+  document.getElementById('pinErr').textContent = '';
+  document.getElementById('ovPin').classList.add('open');
+};
+
+window.submitPin = async () => {
+  const v = (document.getElementById('pinInput').value || '').trim();
+  const err = document.getElementById('pinErr');
+  if (pinMode === 'set' || pinMode === 'change'){
+    if (!/^\d{4,6}$/.test(v)){ err.textContent = '숫자 4~6자리로 정해주세요'; return; }
+    try {
+      await set(ref(db, 'schedule/pin'), await sha(v));
+      closePin();
+      if (pinMode === 'set') enterEdit();
+      else alert('PIN이 바뀌었습니다');
+    } catch(e){ err.textContent = '저장이 안 됐어요 — 인터넷을 확인해주세요'; }
+    return;
+  }
+  if (await sha(v) === DATA.pin){ closePin(); enterEdit(); }
+  else { err.textContent = 'PIN이 맞지 않습니다'; document.getElementById('pinInput').value = ''; }
+};
+
+function enterEdit(){
+  editMode = true;
+  document.getElementById('btnEdit').classList.add('on');
+  document.getElementById('btnEdit').textContent = '수정 끝내기';
+  document.getElementById('editBar').style.display = 'flex';
+  render();
+}
+
+document.getElementById('pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') submitPin(); });
+
+/* ═══════════ 동기화 ═══════════ */
+function status(s){
+  const d = document.getElementById('dot'), l = document.getElementById('syncLbl');
+  if (s === 'ok'){ d.className = 'dot ok'; l.textContent = '실시간 동기화 중'; }
+  else if (s === 'err'){ d.className = 'dot err'; l.textContent = '연결 오류 — 새로고침 해주세요'; }
+  else { d.className = 'dot'; l.textContent = '불러오는 중…'; }
+}
+
+async function seedIfEmpty(){
+  try {
+    const snap = await get(ref(db, 'schedule/staff'));
+    if (snap.exists()) return;
+    const out = {};
+    DEFAULT_STAFF.forEach(s => out[s.id] = s);
+    await set(ref(db, 'schedule/staff'), out);
+    // 예시 근무표 — 원장님이 말씀하신 형태로 시작점만
+    await set(ref(db, 'schedule/pattern/s1'), { 1:{start:'10:00',end:'14:00'}, 2:{start:'10:00',end:'14:00'} });
+    await set(ref(db, 'schedule/pattern/s2'), { 1:{start:'10:00',end:'17:00'}, 2:{start:'10:00',end:'17:00'},
+                                                3:{start:'10:00',end:'17:00'}, 4:{start:'10:00',end:'17:00'},
+                                                5:{start:'10:00',end:'17:00'} });
+    await set(ref(db, 'schedule/pattern/s3'), { 1:{start:'15:00',end:'19:00'}, 2:{start:'15:00',end:'19:00'},
+                                                3:{start:'15:00',end:'19:00'}, 4:{start:'15:00',end:'19:00'},
+                                                5:{start:'15:00',end:'19:00'} });
+  } catch (e){ console.error('[laurel] 초기 데이터 생성 실패', e); }
+}
+
+onValue(ref(db, 'schedule'), snap => {
+  const v = snap.val() || {};
+  DATA = { staff: v.staff || {}, pattern: v.pattern || {}, week: v.week || {}, pin: v.pin || '' };
+  // id 보정
+  Object.keys(DATA.staff).forEach(k => { if (!DATA.staff[k].id) DATA.staff[k].id = k; });
+  status('ok');
+  render();
+}, err => { status('err'); console.error('[laurel] 스케줄 구독 실패', err); });
+
+fillTimes();
+seedIfEmpty();
+render();
+</script>
+</body>
+</html>
